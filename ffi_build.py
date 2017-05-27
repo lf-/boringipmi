@@ -13,20 +13,6 @@ ffibuilder.set_source('_freeipmi', r"""
 #include <freeipmi/record-format/ipmi-sdr-record-format.h>
 
 #include <freeipmi/fiid/fiid.h>
-
-fiid_obj_t boringipmi_test (ipmi_ctx_t ctx)
-{
-    fiid_obj_t f = fiid_obj_create(tmpl_cmd_get_device_sdr_rs);
-    int err = ipmi_cmd_get_device_sdr(
-            ctx,
-            0,
-            0,
-            0,
-            0xff,
-            f
-    );
-    return f;
-}
 """, libraries=['freeipmi'])
 
 ffibuilder.cdef("""

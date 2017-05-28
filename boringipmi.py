@@ -51,7 +51,7 @@ class FIIDObject:
         err = lib.fiid_obj_get_data(self.obj, prop, data, data_len)
         if err < 0:
             _ferr(fiid_obj)
-        return data
+        return ffi.unpack(data, data_len)
 
     def __del__(self):
         lib.fiid_obj_destroy(self.obj)

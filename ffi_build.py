@@ -89,6 +89,8 @@ fiid_obj_t fiid_obj_create (fiid_template_t tmpl);
 void fiid_obj_destroy (fiid_obj_t obj);
 
 int fiid_obj_field_len_bytes (fiid_obj_t obj, const char *field);
+int fiid_obj_field_lookup (fiid_obj_t obj,
+                           const char *field);
 
 int FIID_OBJ_GET (fiid_obj_t obj, const char *field, uint64_t *val);
 int fiid_obj_get_data (fiid_obj_t obj,
@@ -115,6 +117,10 @@ int ipmi_cmd_reserve_sdr_repository (ipmi_ctx_t ctx,
 
 /*  Deserialization  */
 extern fiid_template_t tmpl_sdr_record_header;
+extern fiid_template_t tmpl_sdr_full_sensor_record;
+extern fiid_template_t tmpl_sdr_compact_sensor_record;
+extern fiid_template_t tmpl_sdr_event_only_record;
+extern fiid_template_t tmpl_sdr_oem_record;
 """)
 
 if __name__ == '__main__':

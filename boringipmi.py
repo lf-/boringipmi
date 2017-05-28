@@ -29,12 +29,11 @@ class FIIDObject:
         Parameters
         prop -- property name to get
         """
-        val = 0
-        ptr = ffi.new('uint64_t *', val)
+        ptr = ffi.new('uint64_t *')
         err = lib.FIID_OBJ_GET(self.obj, prop.encode(), ptr)
         if err == -1:
             _ferr(self.obj)
-        return val
+        return ptr[0]
 
     def get_data(self, prop: str) -> bytes:
         """
@@ -53,6 +52,11 @@ class FIIDObject:
             _ferr(fiid_obj)
         return ffi.unpack(data, data_len)
 
+    def set_all_data(self, data):
+        err = lib.fiid_obj_set_all(self.obj, data, len(data))
+        if err < 0:
+            _ferr(self.obj)
+
     def __del__(self):
         lib.fiid_obj_destroy(self.obj)
 
@@ -68,6 +72,8 @@ class SDRRecord:
         """
         self.next_record_id = obj.get_int('next_record_id')
         self.data = obj.get_data('record_data')
+        self.header = FIIDObject(lib.tmpl_sdr_record_header)
+        self.header.set_all_data(self.data)
 
 
 class Connection:

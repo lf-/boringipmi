@@ -16,3 +16,6 @@ It isn't clear whether it's my IPMI device which is broken or freeipmi.
 
 Regardless, I'm posting this here in case anyone wants to figure out what is
 going on
+
+Upon further investigation, it's likely that it is necessary to send a
+reserve SDR repo request and pass the reservation ID.

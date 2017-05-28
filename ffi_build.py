@@ -8,8 +8,8 @@ if version_info.major < 3:
 ffibuilder = FFI()
 ffibuilder.set_source('_freeipmi', r"""
 #include <freeipmi/api/ipmi-api.h>
-#include <freeipmi/api/ipmi-sensor-cmds-api.h>
-#include <freeipmi/cmds/ipmi-sensor-cmds.h>
+#include <freeipmi/api/ipmi-sdr-repository-cmds-api.h>
+#include <freeipmi/cmds/ipmi-sdr-repository-cmds.h>
 #include <freeipmi/record-format/ipmi-sdr-record-format.h>
 
 #include <freeipmi/fiid/fiid.h>
@@ -99,20 +99,22 @@ int fiid_obj_set_all (fiid_obj_t obj, const void *data, unsigned int data_len);
 
 
 /*  Commands  */
-extern fiid_template_t tmpl_cmd_get_device_sdr_rs;
+extern fiid_template_t tmpl_cmd_get_sdr_rs;
+extern fiid_template_t tmpl_cmd_reserve_sdr_repository_rs;
 
-int ipmi_cmd_get_device_sdr (ipmi_ctx_t ctx,
+int ipmi_cmd_get_sdr (ipmi_ctx_t ctx,
     uint16_t reservation_id,
     uint16_t record_id,
     uint8_t offset_into_record,
     uint8_t bytes_to_read,
     fiid_obj_t obj_cmd_rs);
 
+int ipmi_cmd_reserve_sdr_repository (ipmi_ctx_t ctx,
+                                     fiid_obj_t obj_cmd_rs);
+
 
 /*  Deserialization  */
 extern fiid_template_t tmpl_sdr_record_header;
-
-fiid_obj_t boringipmi_test(ipmi_ctx_t ctx);
 """)
 
 if __name__ == '__main__':

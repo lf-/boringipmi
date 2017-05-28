@@ -69,6 +69,30 @@ class FIIDObject:
         """
         self.obj = lib.fiid_obj_create(template)
 
+    def get_int(self, prop: str):
+        """
+        Gets the value of an integer property
+
+        Parameters
+        prop -- property name to get
+        """
+        val = 0
+        ptr = ffi.new('uint64_t *', val)
+        err = lib.FIID_OBJ_GET(self.obj, prop.encode(), ptr)
+        if err == -1:
+            _ferr(self.obj)
+        return val
+
+    def get_data(self, prop: str) -> bytes:
+        prop = prop.encode()
+        data_len = lib.fiid_obj_field_len_bytes(self.obj, prop)
+        if data_len < 0:
+            _ferr(self.obj)
+        data = ffi.new('char[]', data_len)
+        err = lib.fiid_obj_get_data(self.obj, prop, data, data_len)
+        if err < 0:
+            _ferr(fiid_obj)
+
     def __del__(self):
         lib.fiid_obj_destroy(self.obj)
 
@@ -77,24 +101,13 @@ class SDRRecord:
     """
     A sensor data record retrieved from an IPMI server
     """
-    def __init__(self, fiidobj):
+    def __init__(self, obj):
         """
         Parameters:
-        fiidobj -- FIIDObject of response from sdr get request
+        obj -- FIIDObject of response from sdr get request
         """
-        fiid_obj = fiidobj.obj
-        self.next_record_id = 0
-        next_record_ptr = ffi.new('uint64_t *', self.next_record_id)
-        err = lib.FIID_OBJ_GET(fiid_obj, b'next_record_id', next_record_ptr)
-        if err == -1:
-            _ferr(fiid_obj)
-        data_len = lib.fiid_obj_field_len_bytes(fiid_obj, b'record_data')
-        if data_len == -1:
-            _ferr(fiid_obj)
-        self.data = ffi.new('char[]', data_len)
-        err = lib.fiid_obj_get_data(fiid_obj, b'record_data', self.data, data_len)
-        if err == -1:
-            _ferr(fiid_obj)
+        self.next_record_id = obj.get_int('next_record_id')
+        self.data = obj.get_data('record_data')
 
 
 class Connection:
@@ -139,20 +152,35 @@ class Connection:
         if err:
             _err(self.ctx)
 
-    def _get_sdr_record(self, record: int):
+    def _reserve_sdr_repo(self):
+        """
+        Take a reservation on the SDR repository
+        """
+        resp = FIIDObject(lib.tmpl_cmd_reserve_sdr_repository_rs)
+        err = lib.ipmi_cmd_reserve_sdr_repository(self.ctx, resp.obj)
+        if err == -1:
+            _err(self.ctx)
+        return resp.get_int('reservation_id')
+
+    def _get_sdr_record(self, record: int, reservation: int = None):
         """
         Get a specific sensor record.
 
         Parameters:
         record -- desired record number to read, 0x0000 always exists
+
+        Keyword parameters:
+        reservation -- IPMI reservation id to use: get one
+                       with _reserve_sdr_repo()
         """
-        reservation = 0x0000  # somewhere in the spec this is specified,
-                              # but 0 works
         offset = 0x00  # offset into record, no idea why anyone would use this
         read = 0xff  # how much into the record it is desired to read
 
-        resp = FIIDObject(lib.tmpl_cmd_get_device_sdr_rs)
-        err = lib.ipmi_cmd_get_device_sdr(
+        if not reservation:
+            reservation = self._reserve_sdr_repo()
+
+        resp = FIIDObject(lib.tmpl_cmd_get_sdr_rs)
+        err = lib.ipmi_cmd_get_sdr(
             self.ctx,
             reservation,
             record,

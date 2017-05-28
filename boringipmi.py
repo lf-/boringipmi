@@ -1,52 +1,5 @@
 from _freeipmi import ffi, lib
 
-#define FIID_FIELD_REQUIRED         0x00000001
-#define FIID_FIELD_OPTIONAL         0x00000002
-#define FIID_FIELD_REQUIRED_MASK    0x0000000F
-#define FIID_FIELD_LENGTH_FIXED     0x00000010
-#define FIID_FIELD_LENGTH_VARIABLE  0x00000020
-#define FIID_FIELD_LENGTH_MASK      0x000000F0
-#define FIID_FIELD_MAKES_PACKET_SUFFICIENT 0x00010000
-
-IPMI_ERROR = {
-    0: 'IPMI_ERR_SUCCESS',
-    1: 'IPMI_ERR_CTX_NULL',
-    2: 'IPMI_ERR_CTX_INVALID',
-    3: 'IPMI_ERR_PERMISSION',
-    4: 'IPMI_ERR_USERNAME_INVALID',
-    5: 'IPMI_ERR_PASSWORD_INVALID',
-    6: 'IPMI_ERR_K_G_INVALID',
-    7: 'IPMI_ERR_PRIVILEGE_LEVEL_INSUFFICIENT',
-    8: 'IPMI_ERR_PRIVILEGE_LEVEL_CANNOT_BE_OBTAINED',
-    9: 'IPMI_ERR_AUTHENTICATION_TYPE_UNAVAILABLE',
-    10: 'IPMI_ERR_CIPHER_SUITE_ID_UNAVAILABLE',
-    11: 'IPMI_ERR_PASSWORD_VERIFICATION_TIMEOUT',
-    12: 'IPMI_ERR_IPMI_2_0_UNAVAILABLE',
-    13: 'IPMI_ERR_CONNECTION_TIMEOUT',
-    14: 'IPMI_ERR_SESSION_TIMEOUT',
-    15: 'IPMI_ERR_DEVICE_ALREADY_OPEN',
-    16: 'IPMI_ERR_DEVICE_NOT_OPEN',
-    17: 'IPMI_ERR_DEVICE_NOT_SUPPORTED',
-    18: 'IPMI_ERR_DEVICE_NOT_FOUND',
-    19: 'IPMI_ERR_DRIVER_BUSY',
-    20: 'IPMI_ERR_DRIVER_TIMEOUT',
-    21: 'IPMI_ERR_MESSAGE_TIMEOUT',
-    22: 'IPMI_ERR_COMMAND_INVALID_FOR_SELECTED_INTERFACE',
-    23: 'IPMI_ERR_COMMAND_INVALID_OR_UNSUPPORTED',
-    24: 'IPMI_ERR_BAD_COMPLETION_CODE',
-    25: 'IPMI_ERR_BAD_RMCPPLUS_STATUS_CODE',
-    26: 'IPMI_ERR_NOT_FOUND',
-    27: 'IPMI_ERR_BMC_BUSY',
-    28: 'IPMI_ERR_OUT_OF_MEMORY',
-    29: 'IPMI_ERR_HOSTNAME_INVALID',
-    30: 'IPMI_ERR_PARAMETERS',
-    31: 'IPMI_ERR_DRIVER_PATH_REQUIRED',
-    32: 'IPMI_ERR_IPMI_ERROR',
-    33: 'IPMI_ERR_SYSTEM_ERROR',
-    34: 'IPMI_ERR_INTERNAL_ERROR',
-    35: 'IPMI_ERR_ERRNUMRANGE'
-}
-
 
 def _err(ctx):
     raise RuntimeError('IPMI error: {} ({})'.format(lib.ipmi_ctx_errnum(ctx),
@@ -84,6 +37,12 @@ class FIIDObject:
         return val
 
     def get_data(self, prop: str) -> bytes:
+        """
+        Get the value of a data property as bytes
+
+        Parameters:
+        prop -- property name to get
+        """
         prop = prop.encode()
         data_len = lib.fiid_obj_field_len_bytes(self.obj, prop)
         if data_len < 0:

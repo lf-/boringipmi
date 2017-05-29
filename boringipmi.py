@@ -258,7 +258,7 @@ class Connection:
         Keyword Parameters:
         kg -- IPMI K_g (if left blank, pw is used)
         priv_level -- Desired IPMI privilege level to auth to
-        sess_timeout -- Presumably the session is killed when this elapses
+        sess_timeout -- The session is killed after this number of ms
         retrans_timeout -- Presumably give up retransmitting when this elapses
         """
         self.ctx = lib.ipmi_ctx_create()

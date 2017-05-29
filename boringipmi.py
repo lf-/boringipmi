@@ -201,8 +201,8 @@ class SDRRecordCompact(SDRRecord):
             self.name = self._raw_templ.get_data('id_string').rstrip(b'\x00').decode('ascii')
 
     def __repr__(self):
-        return '<{r.__class__.__name__} #{r.sensor_number} {r.name!r}: ' \
-               '{r.sensor_type!r}>'.format(r=self)
+        return '<{r.__class__.__name__} #{r.record_id} {r.name!r}: ' \
+               'sensor_num {r.sensor_number} {r.sensor_type!r}>'.format(r=self)
 
 
 class SDRRecordFull(SDRRecordCompact):
@@ -294,6 +294,23 @@ class Connection:
             records.append(self._get_sdr_record(next_id))
             next_id = records[-1].next_record_id
         return records
+
+    def read_sensor(self, sensor_num):
+        """
+        Read the numeric value of a sensor
+
+        Parameters:
+        sensor_num -- number of the sensor from the sdr repo
+        """
+        resp = FIIDObject(lib.tmpl_cmd_get_sensor_reading_rs)
+        self._check_retry(
+            lib.ipmi_cmd_get_sensor_reading,
+            self.ctx,
+            sensor_num,
+            resp.obj
+        )
+        return resp.get_int('sensor_reading')
+
 
     def _connect(self):
         lib.ipmi_ctx_close(self.ctx)

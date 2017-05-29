@@ -6,9 +6,6 @@ from _freeipmi import ffi, lib
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
-def _err(ctx):
-    raise RuntimeError('IPMI error: {} ({})'.format(lib.ipmi_ctx_errnum(ctx),
-                       ffi.string(lib.ipmi_ctx_errormsg(ctx))))
 
 def _ferr(obj):
     raise RuntimeError('FIID error: {} ({})'.format(lib.fiid_obj_errnum(obj),
@@ -269,7 +266,7 @@ class Connection:
         workaround_flags = 0
         flags = 0
         c_kg = ffi.new('unsigned char[]', kg)
-        err = lib.ipmi_ctx_open_outofband_2_0(
+        self.conn_flags = (
             self.ctx,
             host.encode(),
             user.encode(),
@@ -283,8 +280,7 @@ class Connection:
             workaround_flags,
             flags
         )
-        if err:
-            _err(self.ctx)
+        self._connect()
 
     def read_sdr_repo(self):
         """
@@ -299,14 +295,19 @@ class Connection:
             next_id = records[-1].next_record_id
         return records
 
+    def _connect(self):
+        lib.ipmi_ctx_close(self.ctx)
+        err = lib.ipmi_ctx_open_outofband_2_0(*self.conn_flags)
+        if err:
+            self._err()
+
     def _reserve_sdr_repo(self):
         """
         Take a reservation on the SDR repository
         """
         resp = FIIDObject(lib.tmpl_cmd_reserve_sdr_repository_rs)
-        err = lib.ipmi_cmd_reserve_sdr_repository(self.ctx, resp.obj)
-        if err == -1:
-            _err(self.ctx)
+        self._check_retry(lib.ipmi_cmd_reserve_sdr_repository,
+                          self.ctx, resp.obj)
         return resp.get_int('reservation_id')
 
     def _get_sdr_record(self, record: int, reservation: int = None):
@@ -327,7 +328,8 @@ class Connection:
             reservation = self._reserve_sdr_repo()
 
         resp = FIIDObject(lib.tmpl_cmd_get_sdr_rs)
-        err = lib.ipmi_cmd_get_sdr(
+        self._check_retry(
+            lib.ipmi_cmd_get_sdr,
             self.ctx,
             reservation,
             record,
@@ -335,10 +337,38 @@ class Connection:
             read,
             resp.obj
         )
-        if err == -1:
-            _err(self.ctx)
-            return
         return SDRRecord.create(resp)
+
+    def _err(self):
+        """
+        Call on detection of error condition
+        Converts error number to exception or asks for retry
+        """
+        SESSION_TIMEOUT = 14
+        ctx = self.ctx
+        errnum = lib.ipmi_ctx_errnum(ctx)
+        if errnum == SESSION_TIMEOUT:
+            self._connect()
+            return True
+        raise RuntimeError('IPMI error: {} ({})'.format(errnum,
+                           ffi.string(lib.ipmi_ctx_errormsg(ctx))))
+
+    def _check_retry(self, func, *args):
+        """
+        Run the given function
+
+        If it returns below zero, the actual error is checked and a retry
+        may be attempted
+        """
+        retry_count = 0
+        while retry_count < 2:
+            retry_count += 1
+            err = func(*args)
+            # the joys of mutable state! What is actually happening is
+            # self._err() either fixes the error condition or
+            # throws an exception
+            if err < 0:
+                self._err()
 
     def __del__(self):
         lib.ipmi_ctx_close(self.ctx)

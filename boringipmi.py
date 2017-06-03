@@ -356,16 +356,20 @@ class Connection:
         )
         return SDRRecord.create(resp)
 
-    def _err(self):
+    def _err(self, timeout_ok=False) -> bool:
         """
         Call on detection of error condition
-        Converts error number to exception or asks for retry
+        Converts error number to exception
+
+        Keyword parameters:
+        timeout_ok -- whether we should accept timeout errors
+                      and not throw an exception
         """
-        SESSION_TIMEOUT = 14
+        ERR_SESSION_TIMEOUT = 14
         ctx = self.ctx
         errnum = lib.ipmi_ctx_errnum(ctx)
-        if errnum == SESSION_TIMEOUT:
-            self._connect()
+        log.debug('Got ctx error number %d', errnum)
+        if timeout_ok and errnum == ERR_SESSION_TIMEOUT:
             return True
         raise RuntimeError('IPMI error: {} ({})'.format(errnum,
                            ffi.string(lib.ipmi_ctx_errormsg(ctx))))
@@ -376,16 +380,21 @@ class Connection:
 
         If it returns below zero, the actual error is checked and a retry
         may be attempted
+
+        Parameters:
+        func -- function object to run
+        *args -- positional args for the function
         """
-        retry_count = 0
-        while retry_count < 2:
-            retry_count += 1
+        # try once with potential to retry, then try again, failing fast
+        for retry in range(2):
             err = func(*args)
-            # the joys of mutable state! What is actually happening is
-            # self._err() either fixes the error condition or
-            # throws an exception
             if err < 0:
-                self._err()
+                retry = self._err(timeout_ok=(retry == 0))
+                if retry:
+                    self._connect()
+                    continue
+            break
+
 
     def __del__(self):
         lib.ipmi_ctx_close(self.ctx)

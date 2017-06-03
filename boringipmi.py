@@ -261,6 +261,8 @@ class Connection:
         sess_timeout -- The session is killed after this number of ms
         retrans_timeout -- Presumably give up retransmitting when this elapses
         """
+        self._sdr_repo_cache = None
+
         self.ctx = lib.ipmi_ctx_create()
 
         workaround_flags = 0
@@ -287,17 +289,37 @@ class Connection:
         Read out the entire SDR repository and return it as SDRRecord
         objects
         """
+        if self._sdr_repo_cache:
+            return self._sdr_repo_cache
         next_id = 0
         records = []
 
         while next_id != 0xffff:
             records.append(self._get_sdr_record(next_id))
             next_id = records[-1].next_record_id
+        self._sdr_repo_cache = records
         return records
 
-    def read_sensor(self, sensor_num):
+    def read_sensor(self, sensor_name):
         """
-        Read the numeric value of a sensor
+        Read the numeric value of a sensor by name
+
+        Parameters:
+        sensor_name -- name of sensor to read out
+        """
+        repo = self.read_sdr_repo()
+        sensor_num = None
+        for rec in repo:
+            if hasattr(rec, 'name') and rec.name == sensor_name:
+                sensor_num = rec.sensor_number
+                break
+        if sensor_num is None:
+            raise ValueError('Failed to find specified sensor')
+        return self.read_sensor_num(sensor_num)
+
+    def read_sensor_num(self, sensor_num):
+        """
+        Read the numeric value of a sensor by number
 
         Parameters:
         sensor_num -- number of the sensor from the sdr repo
@@ -310,7 +332,6 @@ class Connection:
             resp.obj
         )
         return resp.get_int('sensor_reading')
-
 
     def _connect(self):
         lib.ipmi_ctx_close(self.ctx)

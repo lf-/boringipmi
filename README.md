@@ -20,7 +20,8 @@ IPMI device works with ipmi-sensors but not with boringipmi, that is a
 ```python
 >>> import boringipmi
 >>> conn = boringipmi.Connection('server1', 'user', 'password')
->>> conn.read_sdr_repo()
+>>> with conn:
+        print(conn.read_sdr_repo())
 [<SDRRecordOEM #0 OEM 4156>,
  <SDRRecordFull #1 'VRM 1': sensor_num 1 'power_unit'>,
  <SDRRecordFull #2 'VRM 2': sensor_num 2 'power_unit'>,
@@ -33,7 +34,8 @@ IPMI device works with ipmi-sensors but not with boringipmi, that is a
  <SDRRecordFull #19 'Temp 4': sensor_num 17 'temperature'>
  ...
 ]
->>> conn.read_sensor('Temp 1')
+>>> with conn:
+        print(conn.read_sensor('Temp 1'))
 18
 ```
 

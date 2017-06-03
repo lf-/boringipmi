@@ -282,7 +282,6 @@ class Connection:
             workaround_flags,
             flags
         )
-        self._connect()
 
     def read_sdr_repo(self):
         """
@@ -338,6 +337,9 @@ class Connection:
         err = lib.ipmi_ctx_open_outofband_2_0(*self.conn_flags)
         if err:
             self._err()
+
+    def _disconnect(self):
+        lib.ipmi_ctx_close(self.ctx)
 
     def _reserve_sdr_repo(self):
         """
@@ -416,6 +418,11 @@ class Connection:
                     continue
             break
 
+    def __enter__(self):
+        self._connect()
+
+    def __exit__(self, *args):
+        self._disconnect()
 
     def __del__(self):
         lib.ipmi_ctx_close(self.ctx)
